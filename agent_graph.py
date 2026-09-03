@@ -92,13 +92,20 @@ def diagnosis_node(state: IncidentState) -> Dict[str, Any]:
         "status": "DIAGNOSED"
     }
 
+from webhook_notifier import SlackPagerDutyNotifier
+from github_patcher import GitHubPatchGenerator
+
 def escalation_node(state: IncidentState) -> Dict[str, Any]:
     """Node executed for P0/P1 critical outages requiring engineering escalation."""
     severity = state.get("severity", "P0")
     meta = state.get("parsed_metadata", {})
     error_type = meta.get("error_type", "Unknown")
+    diagnosis = state.get("diagnosis", "")
     
-    escalation_msg = f"🚨 PAGERDUTY DISPATCH: Escalated {severity} {error_type} incident to Senior DevOps On-Call Team & Infrastructure Leads."
+    # Dispatch Webhook Notification to Slack / PagerDuty
+    webhook_res = SlackPagerDutyNotifier.dispatch_p0_p1_alert(severity, error_type, diagnosis)
+    
+    escalation_msg = f"🚨 PAGERDUTY DISPATCH: Escalated {severity} {error_type} incident to Senior DevOps On-Call Team & Infrastructure Leads. (Webhook Channel: {webhook_res['channel']})"
     
     action_plan = [
         "Trigger immediate PagerDuty / Slack #incidents channel notification.",
@@ -118,11 +125,15 @@ def patch_remediation_node(state: IncidentState) -> Dict[str, Any]:
     """Node executed for P2/P3 standard application errors for auto-remediation."""
     meta = state.get("parsed_metadata", {})
     error_type = meta.get("error_type", "Unknown")
+    raw_log = state.get("raw_log", "")
     
-    patch_msg = f"🛠️ AUTO-PATCH GENERATED: Formulated automated code patch and null-check pull request for {error_type}."
+    # Formulate Automated GitHub Pull Request
+    pr_data = GitHubPatchGenerator.generate_pull_request(error_type, raw_log, "Apply defensive null-checks and wrap call stack in error boundary.")
+    
+    patch_msg = f"🛠️ AUTO-PATCH GENERATED: Created PR '{pr_data['pr_title']}' on branch '{pr_data['branch_name']}'."
     
     action_plan = [
-        "Generate automated bug hotfix branch in GitHub repository.",
+        f"Generated automated hotfix branch `{pr_data['branch_name']}` in GitHub repository.",
         "Add null-coalescing guard clauses around affected variable pointers.",
         "Trigger CI/CD regression test suite on Staging environment.",
         "Auto-merge hotfix PR upon 100% test pass rate."
@@ -134,6 +145,7 @@ def patch_remediation_node(state: IncidentState) -> Dict[str, Any]:
         "current_node": "patch_remediation_node",
         "status": "HOTFIX_PATCH_READY"
     }
+
 
 def rca_generation_node(state: IncidentState) -> Dict[str, Any]:
     """Generates structured Root Cause Analysis (RCA) and action items."""

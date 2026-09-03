@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from agent_graph import triage_pipeline
-from db_store import save_incident, get_recent_incidents
+from db_store import save_incident, get_recent_incidents, get_sre_metrics
 
 app = FastAPI(
     title="Autonomous Incident Triage Agent API",
@@ -46,6 +46,11 @@ def health():
 @app.get("/api/v1/incidents")
 def list_incidents(limit: int = 10):
     return {"incidents": get_recent_incidents(limit)}
+
+@app.get("/api/v1/metrics")
+def get_metrics():
+    return {"sre_metrics": get_sre_metrics()}
+
 
 @app.post("/api/v1/triage", response_model=TriageResponse)
 def run_triage(request: TriageRequest):
