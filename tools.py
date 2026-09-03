@@ -1,51 +1,86 @@
-"""
-Incident Triage Tools & Utility Functions
-Provides helper utilities for log parsing, stack trace analysis,
-severity assignment, and structured Root Cause Analysis (RCA) creation.
-"""
-
 import os
 import re
+import json
+import urllib.request
 from typing import Dict, Any, List, Optional
 
+# Load environment variables from .env if python-dotenv is present, or parse .env manually
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    if os.path.exists(".env"):
+        with open(".env", "r") as f:
+            for line in f:
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.strip().split("=", 1)
+                    os.environ[k] = v
+
+
+
 class LLMDiagnosisTool:
-    """Uses LLM (Google Gemini / LangChain) to analyze unformatted stack traces and generate custom AI patches."""
+    """Uses Groq / Gemini LLM API to analyze unformatted crash logs and generate real AI root-cause analysis."""
     
     @staticmethod
     def analyze_unformatted_log(raw_log: str) -> Dict[str, Any]:
-        """Calls Gemini API or executes smart heuristic AI fallback for unknown stack traces."""
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        """Queries Groq LLM API (llama-3.3-70b-versatile / llama3-8b-8192) for real-time AI log diagnosis."""
+        groq_key = os.getenv("GROQ_API_KEY")
         
-        if api_key:
+        if groq_key:
             try:
-                from langchain_google_genai import ChatGoogleGenerativeAI
-                llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
-                prompt = f"""You are a Principal DevOps & Site Reliability Engineer.
-Analyze this production crash log string:
-{raw_log}
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                prompt = f"""You are an Expert DevOps / Site Reliability Engineer AI Agent.
+Analyze this production crash log:
+"{raw_log}"
 
-Provide a JSON output with keys:
-- error_type: (short category)
-- severity: (P0, P1, P2, or P3)
-- status_code: (integer HTTP code)
-- root_cause: (1-2 sentence detailed cause)
-- custom_patch: (suggested code snippet or config fix)
+Return ONLY a valid JSON object (no code block formatting, no markdown) with exact keys:
+{{
+  "error_type": "Short 2-4 word error category",
+  "severity": "P0, P1, P2, or P3",
+  "status_code": 500,
+  "root_cause": "Detailed 1-2 sentence root cause explanation",
+  "custom_patch": "Recommended code hotfix or infrastructure patch"
+}}
 """
-                response = llm.invoke(prompt)
-                import json
-                parsed_res = json.loads(response.content.strip("`json\n "))
-                return parsed_res
+                payload = json.dumps({
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {"role": "system", "content": "You are a DevOps Incident Analysis AI that outputs raw JSON only."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.1,
+                    "response_format": {"type": "json_object"}
+                }).encode("utf-8")
+                
+                req = urllib.request.Request(
+                    url,
+                    data=payload,
+                    headers={
+                        "Authorization": f"Bearer {groq_key}",
+                        "Content-Type": "application/json",
+                        "User-Agent": "AutonomousIncidentAgent/1.0"
+                    },
+                    method="POST"
+                )
+                
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    res_body = response.read().decode("utf-8")
+                    res_json = json.loads(res_body)
+                    content_str = res_json["choices"][0]["message"]["content"]
+                    parsed_res = json.loads(content_str)
+                    return parsed_res
             except Exception as e:
                 pass
                 
-        # Smart AI Heuristic Fallback for dynamic stack trace analysis
+        # Smart Heuristic Fallback if offline or API key unreachable
         return {
             "error_type": "Deep Telemetry Exception",
             "severity": "P1" if ("Timeout" in raw_log or "Connection" in raw_log) else "P2",
             "status_code": 500,
-            "root_cause": f"Unstructured stack trace analysis detected unhandled runtime exception in log signature.",
+            "root_cause": "Unstructured stack trace analysis detected unhandled runtime exception in log signature.",
             "custom_patch": "Apply defensive error boundary and wrap call stack in try-except block with fallback logging."
         }
+
 
 class LogParserTool:
     """Parses raw server log strings and extracts critical diagnostic details."""

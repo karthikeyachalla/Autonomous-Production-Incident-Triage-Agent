@@ -30,6 +30,11 @@ ENV/
 *.db
 incidents_history.db
 
+# Secrets & Environment
+.env
+.env.*
+
 # OS Files
 .DS_Store
 Thumbs.db
+
