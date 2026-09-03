@@ -140,16 +140,40 @@ with tabs[0]:
             )
 
 with tabs[1]:
-    st.subheader("📜 Historical Triaged Incidents Log")
-    incidents = get_recent_incidents(15)
+    st.subheader("📜 Historical Triaged Incidents Log & Search")
+    
+    col_filter1, col_filter2 = st.columns([1, 2])
+    with col_filter1:
+        severity_filter = st.selectbox("Filter by Severity:", ["All Severities", "P0", "P1", "P2", "P3"])
+    with col_filter2:
+        search_query = st.text_input("Search Incidents by Keyword:", placeholder="e.g. Postgres, Memory, Timeout, NullPointer")
+        
+    incidents = get_recent_incidents(50)
+    
+    # Apply Filtering
+    if severity_filter != "All Severities":
+        incidents = [inc for inc in incidents if inc["severity"] == severity_filter]
+        
+    if search_query.strip():
+        q = search_query.lower()
+        incidents = [
+            inc for inc in incidents
+            if q in inc["raw_log"].lower() or q in inc["error_type"].lower() or q in inc["diagnosis"].lower()
+        ]
+        
+    st.write(f"Showing **{len(incidents)}** matching record(s):")
+    
     if not incidents:
-        st.write("No incidents triaged yet. Run a log triage in the Live tab!")
+        st.info("No matching incidents found in database history.")
     else:
         for inc in incidents:
-            with st.expander(f"ID #{inc['id']} | {inc['timestamp']} | Severity: {inc['severity']} | {inc['error_type']}"):
-                st.write(f"**Log:** `{inc['raw_log']}`")
-                st.write(f"**Diagnosis:** {inc['diagnosis']}")
-                st.markdown(f"```markdown\n{inc['rca_report']}\n```")
+            severity_tag = "🔴 P0" if inc['severity'] == "P0" else ("🟠 P1" if inc['severity'] == "P1" else "🔵 P2")
+            with st.expander(f"ID #{inc['id']} | {inc['timestamp']} | Severity: {severity_tag} | {inc['error_type']}"):
+                st.write(f"**Raw Crash Log:** `{inc['raw_log']}`")
+                st.write(f"**Diagnostic Conclusion:** {inc['diagnosis']}")
+                st.markdown("---")
+                st.markdown(inc['rca_report'])
+
 
 with tabs[2]:
     st.subheader("🏗️ System Architecture & LangGraph Flow Diagram")
