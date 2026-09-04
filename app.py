@@ -54,8 +54,9 @@ textarea {
     background: #0D0D14 !important; color: #E2E8F0 !important;
     border: 1px solid #2D2D40 !important; border-radius: 10px !important;
     font-family: 'JetBrains Mono', monospace !important; font-size: 0.88rem !important;
-    line-height: 1.6 !important;
+    line-height: 1.6 !important; caret-color: #A78BFA !important;
 }
+textarea::placeholder { color: #4B5563 !important; }
 textarea:focus { border-color: #7C3AED !important; box-shadow: 0 0 0 3px #7C3AED22 !important; }
 
 /* Button */
@@ -131,11 +132,25 @@ div[data-testid="stMetricLabel"] { color: #6B7280 !important; font-size: 0.8rem 
 details { background: #111118 !important; border: 1px solid #1F1F2E !important; border-radius: 10px !important; }
 summary { color: #CBD5E1 !important; font-weight: 600 !important; }
 
-/* Selectbox / Input */
-div[data-testid="stSelectbox"] > div, div[data-testid="stTextInput"] > div > div {
-    background: #0D0D14 !important; border-color: #2D2D40 !important;
+/* Selectbox */
+div[data-testid="stSelectbox"] > div > div {
+    background: #111118 !important; border-color: #2D2D40 !important;
     border-radius: 8px !important; color: #E2E8F0 !important;
 }
+div[data-testid="stSelectbox"] svg { fill: #A78BFA !important; }
+
+/* Selectbox dropdown options */
+li[role="option"] { background: #111118 !important; color: #E2E8F0 !important; }
+li[role="option"]:hover { background: #1F1F2E !important; }
+
+/* Text input */
+div[data-testid="stTextInput"] input {
+    background: #111118 !important; border-color: #2D2D40 !important;
+    border-radius: 8px !important; color: #E2E8F0 !important;
+}
+
+/* Action item text */
+.action-item, .action-item * { color: #CBD5E1 !important; }
 </style>
 """, unsafe_allow_html=True)
 
