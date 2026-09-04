@@ -1,6 +1,6 @@
 """
 Streamlit Web UI for Autonomous Production Incident Triage Agent
-Modern Dark Glassmorphism Enterprise SRE Observability Dashboard
+Ultra-Professional Enterprise SRE Observability Control Center
 """
 
 import streamlit as st
@@ -10,29 +10,36 @@ from db_store import save_incident, get_recent_incidents, get_sre_metrics
 
 # Page Config
 st.set_page_config(
-    page_title="Autonomous Incident Triage AI | SRE Control Center",
+    page_title="Incident Triage Agent | SRE Control Center",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom Glassmorphism & Cyber Dark CSS Styling
+# Custom High-End Modern Dark CSS Styling
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+    html, body, [class*="css"], div, span, label {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
     
-    .main {
-        background: #090D16;
-        color: #F3F4F6;
+    /* Main Background */
+    .stApp {
+        background-color: #0B0F19 !important;
+        color: #F1F5F9 !important;
     }
     
-    /* Header Gradient Title */
-    .hero-header {
-        font-size: 2.6rem;
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #0F172A !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    /* Main Hero Header */
+    .hero-title {
+        font-size: 2.4rem;
         font-weight: 800;
         background: linear-gradient(135deg, #38BDF8 0%, #818CF8 50%, #C084FC 100%);
         -webkit-background-clip: text;
@@ -40,98 +47,120 @@ st.markdown("""
         margin-bottom: 0.2rem;
         letter-spacing: -0.02em;
     }
-    
-    .sub-hero {
-        font-size: 1.1rem;
-        color: #9CA3AF;
+
+    .hero-subtitle {
+        font-size: 1.05rem;
+        color: #94A3B8;
         margin-bottom: 1.2rem;
-        font-weight: 400;
-    }
-    
-    /* Glassmorphism Card Container */
-    .glass-card {
-        background: rgba(17, 24, 39, 0.75);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 14px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    }
-    
-    .project-banner {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-        border-left: 4px solid #38BDF8;
-        border-radius: 10px;
-        padding: 1.2rem;
-        margin-bottom: 1.8rem;
-        border: 1px solid rgba(56, 189, 248, 0.2);
     }
 
-    .project-title {
-        font-size: 1.15rem;
+    /* Enterprise Purpose Card */
+    .purpose-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-left: 5px solid #38BDF8;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.8rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .purpose-header {
+        font-size: 1.1rem;
         font-weight: 700;
         color: #38BDF8;
-        margin-bottom: 0.4rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 0.5rem;
     }
 
-    .project-desc {
-        color: #E2E8F0;
+    .purpose-body {
         font-size: 0.95rem;
-        line-height: 1.5;
+        color: #E2E8F0;
+        line-height: 1.6;
     }
 
-    /* Severity Badges */
-    .badge-p0 {
-        background-color: rgba(239, 68, 68, 0.2);
-        color: #F87171;
-        border: 1px solid rgba(239, 68, 68, 0.4);
-        padding: 0.4rem 0.8rem;
-        border-radius: 6px;
-        font-weight: 700;
-        font-family: 'JetBrains Mono', monospace;
+    /* Form Container */
+    div[data-testid="stForm"] {
+        background: #111827 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 14px !important;
+        padding: 1.5rem !important;
     }
 
-    .badge-p1 {
-        background-color: rgba(245, 158, 11, 0.2);
-        color: #FBBF24;
-        border: 1px solid rgba(245, 158, 11, 0.4);
-        padding: 0.4rem 0.8rem;
-        border-radius: 6px;
-        font-weight: 700;
-        font-family: 'JetBrains Mono', monospace;
+    /* Text Area Styling */
+    textarea {
+        background-color: #0F172A !important;
+        color: #F8FAFC !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 8px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.9rem !important;
+    }
+    textarea:focus {
+        border-color: #38BDF8 !important;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
     }
 
-    .badge-p2 {
-        background-color: rgba(6, 182, 212, 0.2);
-        color: #22D3EE;
-        border: 1px solid rgba(6, 182, 212, 0.4);
-        padding: 0.4rem 0.8rem;
-        border-radius: 6px;
-        font-weight: 700;
-        font-family: 'JetBrains Mono', monospace;
+    /* Primary Action Button */
+    div[st-form-submit-button] button, button[kind="primary"], .stButton > button {
+        background: linear-gradient(135deg, #0284C7 0%, #4F46E5 100%) !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.65rem 1.4rem !important;
+        font-size: 1rem !important;
+        transition: all 0.2s ease-in-out !important;
+        box-shadow: 0 4px 14px 0 rgba(2, 132, 199, 0.39) !important;
+    }
+    div[st-form-submit-button] button:hover, .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 20px 0 rgba(79, 70, 229, 0.5) !important;
+    }
+
+    /* Tab Header Custom Styling */
+    button[data-baseweb="tab"] {
+        color: #94A3B8 !important;
+        font-weight: 600 !important;
+        font-size: 0.98rem !important;
+        padding: 0.8rem 1.2rem !important;
+    }
+    button[aria-selected="true"] {
+        color: #38BDF8 !important;
+        border-bottom-color: #38BDF8 !important;
+    }
+
+    /* Metric Cards */
+    div[data-testid="stMetricValue"] {
+        color: #38BDF8 !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #94A3B8 !important;
+        font-weight: 600 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Top Bar Title
-st.markdown('<div class="hero-header">🛡️ Autonomous Production Incident Triage Agent</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-hero">Enterprise Multi-Agent Observability System powered by LangGraph, Groq Llama-3.3 & SQLite</div>', unsafe_allow_html=True)
+# Main Hero Banner
+st.markdown('<div class="hero-title">🛡️ Autonomous Incident Triage Agent</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-subtitle">Enterprise Agentic Observability Platform | LangGraph, Groq Llama-3.3 & SQLite</div>', unsafe_allow_html=True)
 
-# Project Purpose Context Banner
+# Enterprise Problem & Purpose Banner
 st.markdown("""
-<div class="project-banner">
-    <div class="project-title">🎯 Why This Project Exists & The Problem It Solves</div>
-    <div class="project-desc">
-        During production cloud outages, SRE & DevOps teams spend <b>45+ minutes manually reading thousands of log lines</b> to diagnose crashes. 
+<div class="purpose-card">
+    <div class="purpose-header">🎯 Enterprise Problem Statement & Purpose</div>
+    <div class="purpose-body">
+        During cloud infrastructure outages, SRE teams spend <b>45+ minutes manually reading thousands of raw log lines</b>. 
         This autonomous agent ingests unstructured crash logs, parses error telemetry, classifies severity (P0-P3), dynamically triggers 
-        <b>Slack/PagerDuty webhook dispatches for critical DB/OOM deadlocks</b>, and auto-generates <b>GitHub Hotfix PRs for runtime exceptions</b> in under <b>1.5 seconds</b>.
+        <b>Slack/PagerDuty webhook dispatches for critical outages</b>, and auto-generates <b>GitHub Hotfix PRs for app exceptions</b> in <b>under 1.5 seconds</b>.
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-tabs = st.tabs(["🚀 Live Incident Triage", "📜 Historic Incident Logs", "📊 SRE KPI Analytics", "🏗️ LangGraph Architecture"])
+tabs = st.tabs(["🚀 Live Incident Triage", "📜 Incident Audit Logs", "📊 SRE KPI Analytics", "🏗️ LangGraph Architecture"])
 
 with tabs[0]:
     st.sidebar.header("📋 Preset Production Logs")
@@ -169,11 +198,11 @@ with tabs[0]:
         if not raw_log.strip():
             st.warning("⚠️ Please enter a server log string to analyze.")
         else:
-            st.info("⚡ Invoking LangGraph StateGraph: Ingestion → Diagnosis → Severity Router → Remediation Node...")
+            st.info("⚡ Invoking LangGraph StateGraph: Ingestion → Diagnosis → Router → Remediation Node...")
             progress_bar = st.progress(0)
             
             for pct in range(1, 101, 25):
-                time.sleep(0.06)
+                time.sleep(0.05)
                 progress_bar.progress(pct)
                 
             result = triage_pipeline.run(raw_log)
@@ -196,7 +225,7 @@ with tabs[0]:
             st.markdown("---")
             
             # Dynamic Node Routing Outcome
-            st.subheader("🔀 LangGraph Graph Execution Routing Outcome")
+            st.subheader("🔀 LangGraph Dynamic Graph Routing Outcome")
             if result.get("escalation_status"):
                 st.error(result["escalation_status"])
             elif result.get("patch_recommendation"):
