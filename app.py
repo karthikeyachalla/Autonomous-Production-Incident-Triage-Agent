@@ -1,456 +1,297 @@
 """
-Autonomous Production Incident Triage Agent
-Hyper-Premium Enterprise SRE Observability Control Center
+Autonomous Production Incident Triage Agent — Clean Minimal Dashboard
 """
-
 import streamlit as st
 import time
-import json
-import plotly.express as px
 import plotly.graph_objects as go
 from agent_graph import triage_pipeline
 from db_store import save_incident, get_recent_incidents, get_sre_metrics
 
-# Page Configuration
 st.set_page_config(
-    page_title="IncidentAI | Enterprise SRE Observability Platform",
+    page_title="Incident Triage Agent",
     page_icon="🛡️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Custom High-End Modern Dark Glassmorphism CSS Styling (Linear / Vercel Aesthetic)
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
-    html, body, [class*="css"], div, span, label {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-    }
-    
-    /* Main App Dark Background */
-    .stApp {
-        background: #080C14 !important;
-        color: #F8FAFC !important;
-    }
-    
-    /* Sidebar Styling */
-    section[data-testid="stSidebar"] {
-        background: #0F172A !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
-    }
+*, html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
-    /* Main Hero Header */
-    .hero-container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    
-    .hero-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #38BDF8 0%, #818CF8 50%, #C084FC 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: -0.03em;
-        margin: 0;
-    }
+.stApp { background: #0A0A0F !important; }
 
-    .hero-subtitle {
-        font-size: 1rem;
-        color: #94A3B8;
-        margin-top: 0.3rem;
-    }
+/* Hide Streamlit chrome */
+#MainMenu, footer, header { visibility: hidden; }
+.block-container { padding: 2rem 3rem !important; max-width: 1200px !important; }
 
-    /* Enterprise Purpose Card */
-    .purpose-card {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.85) 100%);
-        border: 1px solid rgba(56, 189, 248, 0.2);
-        border-left: 4px solid #38BDF8;
-        border-radius: 14px;
-        padding: 1.25rem 1.5rem;
-        margin-bottom: 1.8rem;
-        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
-    }
+/* Top Nav */
+.top-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 0; border-bottom: 1px solid #1F1F2E;
+    margin-bottom: 2.5rem;
+}
+.logo { font-size: 1.3rem; font-weight: 800; color: #fff; letter-spacing: -0.03em; }
+.logo span { color: #7C3AED; }
+.nav-badge {
+    background: #7C3AED22; color: #A78BFA;
+    border: 1px solid #7C3AED44; border-radius: 20px;
+    padding: 0.3rem 0.9rem; font-size: 0.78rem; font-weight: 600;
+}
 
-    .purpose-header {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #38BDF8;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 0.4rem;
-    }
+/* Section title */
+.section-title { font-size: 1.05rem; font-weight: 700; color: #E2E8F0; margin-bottom: 1rem; }
 
-    .purpose-body {
-        font-size: 0.95rem;
-        color: #CBD5E1;
-        line-height: 1.6;
-    }
+/* Input card */
+.input-card {
+    background: #111118; border: 1px solid #1F1F2E;
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem;
+}
 
-    /* Node Stepper Execution Cards */
-    .node-step-card {
-        background: #111827;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 0.9rem 1.2rem;
-        margin-bottom: 0.75rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        transition: all 0.2s ease-in-out;
-    }
-    .node-step-card:hover {
-        border-color: rgba(56, 189, 248, 0.4);
-        background: #1E293B;
-    }
-    .node-step-title {
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: #F8FAFC;
-    }
-    .node-step-status {
-        font-size: 0.8rem;
-        font-weight: 700;
-        padding: 0.25rem 0.6rem;
-        border-radius: 6px;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    .status-done {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34D399;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-    }
+/* Textarea */
+textarea {
+    background: #0D0D14 !important; color: #E2E8F0 !important;
+    border: 1px solid #2D2D40 !important; border-radius: 10px !important;
+    font-family: 'JetBrains Mono', monospace !important; font-size: 0.88rem !important;
+    line-height: 1.6 !important;
+}
+textarea:focus { border-color: #7C3AED !important; box-shadow: 0 0 0 3px #7C3AED22 !important; }
 
-    /* Form Container */
-    div[data-testid="stForm"] {
-        background: #0F172A !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 16px !important;
-        padding: 1.75rem !important;
-        box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.4) !important;
-    }
+/* Button */
+.stButton > button, div[st-form-submit-button] button {
+    background: #7C3AED !important; color: #fff !important;
+    border: none !important; border-radius: 10px !important;
+    font-weight: 700 !important; font-size: 0.95rem !important;
+    padding: 0.65rem 1.6rem !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 20px #7C3AED44 !important;
+}
+.stButton > button:hover { background: #6D28D9 !important; transform: translateY(-1px) !important; }
 
-    /* Text Area Styling */
-    textarea {
-        background-color: #090D16 !important;
-        color: #F8FAFC !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 10px !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        font-size: 0.9rem !important;
-    }
-    textarea:focus {
-        border-color: #38BDF8 !important;
-        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
-    }
+/* Result metric cards */
+.metric-row { display: flex; gap: 1rem; margin: 1.5rem 0; }
+.metric-card {
+    flex: 1; background: #111118; border: 1px solid #1F1F2E;
+    border-radius: 12px; padding: 1.2rem 1.4rem;
+}
+.metric-label { font-size: 0.78rem; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+.metric-value { font-size: 1.4rem; font-weight: 800; color: #E2E8F0; }
 
-    /* Primary Action Button */
-    div[st-form-submit-button] button, button[kind="primary"], .stButton > button {
-        background: linear-gradient(135deg, #0284C7 0%, #4F46E5 100%) !important;
-        color: #FFFFFF !important;
-        font-weight: 700 !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 0.75rem 1.75rem !important;
-        font-size: 1.05rem !important;
-        transition: all 0.25s ease-in-out !important;
-        box-shadow: 0 4px 16px 0 rgba(2, 132, 199, 0.4) !important;
-    }
-    div[st-form-submit-button] button:hover, .stButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px 0 rgba(79, 70, 229, 0.6) !important;
-    }
+/* Severity colors */
+.sev-p0 { color: #F87171 !important; }
+.sev-p1 { color: #FBBF24 !important; }
+.sev-p2 { color: #34D399 !important; }
 
-    /* Tab Styling */
-    button[data-baseweb="tab"] {
-        color: #94A3B8 !important;
-        font-weight: 600 !important;
-        font-size: 1rem !important;
-        padding: 0.9rem 1.4rem !important;
-    }
-    button[aria-selected="true"] {
-        color: #38BDF8 !important;
-        border-bottom-color: #38BDF8 !important;
-    }
+/* Alert boxes */
+.alert-critical {
+    background: #F8717115; border: 1px solid #F8717140;
+    border-left: 4px solid #F87171; border-radius: 10px;
+    padding: 1rem 1.2rem; margin: 1rem 0; color: #FCA5A5; font-size: 0.9rem;
+}
+.alert-ok {
+    background: #34D39915; border: 1px solid #34D39940;
+    border-left: 4px solid #34D399; border-radius: 10px;
+    padding: 1rem 1.2rem; margin: 1rem 0; color: #6EE7B7; font-size: 0.9rem;
+}
+.alert-info {
+    background: #7C3AED15; border: 1px solid #7C3AED40;
+    border-left: 4px solid #7C3AED; border-radius: 10px;
+    padding: 1rem 1.2rem; margin: 1rem 0; color: #C4B5FD; font-size: 0.9rem;
+}
 
-    /* Metric Cards Custom Styling */
-    div[data-testid="stMetricValue"] {
-        color: #38BDF8 !important;
-        font-weight: 800 !important;
-        font-size: 2.1rem !important;
-    }
-    div[data-testid="stMetricLabel"] {
-        color: #94A3B8 !important;
-        font-weight: 600 !important;
-    }
+/* Action plan */
+.action-item {
+    display: flex; align-items: flex-start; gap: 0.7rem;
+    background: #111118; border: 1px solid #1F1F2E;
+    border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+    color: #CBD5E1; font-size: 0.9rem;
+}
+.action-num {
+    background: #7C3AED22; color: #A78BFA; border-radius: 6px;
+    padding: 0.1rem 0.5rem; font-size: 0.78rem; font-weight: 700; min-width: 24px; text-align: center;
+}
+
+/* Download button */
+.stDownloadButton > button {
+    background: #111118 !important; color: #A78BFA !important;
+    border: 1px solid #7C3AED44 !important; border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+
+/* Tabs */
+button[data-baseweb="tab"] { color: #6B7280 !important; font-weight: 600 !important; }
+button[aria-selected="true"] { color: #A78BFA !important; border-bottom-color: #7C3AED !important; }
+
+/* Metrics */
+div[data-testid="stMetricValue"] { color: #A78BFA !important; font-weight: 800 !important; }
+div[data-testid="stMetricLabel"] { color: #6B7280 !important; font-size: 0.8rem !important; }
+
+/* Expander */
+details { background: #111118 !important; border: 1px solid #1F1F2E !important; border-radius: 10px !important; }
+summary { color: #CBD5E1 !important; font-weight: 600 !important; }
+
+/* Selectbox / Input */
+div[data-testid="stSelectbox"] > div, div[data-testid="stTextInput"] > div > div {
+    background: #0D0D14 !important; border-color: #2D2D40 !important;
+    border-radius: 8px !important; color: #E2E8F0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Main Hero Header Bar
+# Top Nav
 st.markdown("""
-<div class="hero-container">
-    <div>
-        <div class="hero-title">🛡️ Autonomous Incident Triage Agent</div>
-        <div class="hero-subtitle">Enterprise Agentic Observability Platform | LangGraph State Machine, Groq Llama-3.3 & SQLite</div>
-    </div>
+<div class="top-nav">
+    <div class="logo">🛡️ Incident<span>AI</span></div>
+    <div class="nav-badge">LangGraph · Groq Llama-3.3 · FastAPI</div>
 </div>
 """, unsafe_allow_html=True)
 
-# Enterprise Problem Statement Banner
-st.markdown("""
-<div class="purpose-card">
-    <div class="purpose-header">🎯 Problem Statement & Enterprise Value</div>
-    <div class="purpose-body">
-        During cloud infrastructure outages, SRE & DevOps teams spend <b>45+ minutes manually parsing thousands of raw log lines</b>. 
-        This autonomous agent ingests unstructured crash logs, parses error telemetry, classifies severity (P0-P3), dynamically triggers 
-        <b>Slack/PagerDuty webhook dispatches for critical outages</b>, and auto-generates <b>GitHub Hotfix PRs for app exceptions</b> in <b>under 1.5 seconds</b>.
-    </div>
-</div>
-""", unsafe_allow_html=True)
+tabs = st.tabs(["⚡ Triage", "📊 Analytics", "📜 Logs"])
 
-tabs = st.tabs(["🚀 Live Incident Triage", "📊 SRE KPI Analytics", "📜 Historic Audit Logs", "🏗️ LangGraph Architecture"])
-
-# ==================== TAB 1: LIVE INCIDENT TRIAGE ====================
+# ── TAB 1: TRIAGE ─────────────────────────────────────────────────────────────
 with tabs[0]:
-    st.sidebar.header("📋 Preset Production Logs")
-    sample_choice = st.sidebar.selectbox(
-        "Select a preset crash log signature:",
-        [
-            "Custom Log Input",
-            "P0: Out of Memory (OOM) Crash",
-            "P0: Database Connection Deadlock",
-            "P1: 504 Gateway Upstream Timeout",
-            "P2: Application NullPointer Exception"
-        ]
-    )
-
     preset_map = {
-        "P0: Out of Memory (OOM) Crash": "2026-09-02 12:05:00 [EMERGENCY] java.lang.OutOfMemoryError: Java heap space. Container killed by Linux kernel OOMKilled signal.",
-        "P0: Database Connection Deadlock": "2026-09-02 12:00:00 [CRITICAL] org.postgresql.util.PSQLException: ConnectionPoolExhausted max limit 100 reached.",
-        "P1: 504 Gateway Upstream Timeout": "2026-09-02 12:10:00 [ERROR] 504 Gateway Timeout: Call to payment-gateway.service.internal timed out after 15000ms.",
-        "P2: Application NullPointer Exception": "2026-09-02 12:15:00 [ERROR] NullPointerException: Cannot invoke \"com.user.Profile.getId()\" because \"userProfile\" is null."
+        "Custom Input": "",
+        "P0 · DB Deadlock": "2026-09-02 12:00:00 [CRITICAL] org.postgresql.util.PSQLException: ConnectionPoolExhausted max limit 100 reached.",
+        "P0 · OOM Crash": "2026-09-02 12:05:00 [EMERGENCY] java.lang.OutOfMemoryError: Java heap space. OOMKilled.",
+        "P1 · 504 Timeout": "2026-09-02 12:10:00 [ERROR] 504 Gateway Timeout: payment-gateway timed out after 15000ms.",
+        "P2 · NullPointer": "2026-09-02 12:15:00 [ERROR] NullPointerException: Cannot invoke Profile.getId() — userProfile is null.",
     }
 
-    default_log = preset_map.get(sample_choice, "")
+    col_a, col_b = st.columns([3, 2], gap="large")
 
-    col_input, col_status = st.columns([1.6, 1])
-
-    with col_input:
-        with st.form("triage_form"):
-            st.subheader("📥 Ingest Production Log / Stack Trace")
-            raw_log = st.text_area(
-                "Paste raw error log string below:",
-                value=default_log,
-                height=140,
-                placeholder="e.g. 2026-09-04 12:00:00 [CRITICAL] Connection pool exhausted..."
+    with col_a:
+        choice = st.selectbox("Preset logs", list(preset_map.keys()), label_visibility="collapsed")
+        with st.form("triage"):
+            log_input = st.text_area(
+                "log", value=preset_map[choice], height=150,
+                placeholder="Paste any raw production crash log or stack trace here...",
+                label_visibility="collapsed"
             )
-            submit_btn = st.form_submit_button("⚡ Run Autonomous LangGraph Triage Pipeline")
+            run = st.form_submit_button("⚡  Run Triage Pipeline")
 
-    with col_status:
-        st.subheader("🔄 Multi-Agent Graph Stepper")
-        st.markdown("""
-        <div class="node-step-card">
-            <span class="node-step-title">1. Log Ingestion & Metadata Parsing</span>
-            <span class="node-step-status status-done">COMPLETED</span>
-        </div>
-        <div class="node-step-card">
-            <span class="node-step-title">2. Groq Llama-3.3 LLM Reasoning</span>
-            <span class="node-step-status status-done">COMPLETED</span>
-        </div>
-        <div class="node-step-card">
-            <span class="node-step-title">3. Dynamic Severity Branching</span>
-            <span class="node-step-status status-done">COMPLETED</span>
-        </div>
-        <div class="node-step-card">
-            <span class="node-step-title">4. Webhook / GitHub PR Dispatch</span>
-            <span class="node-step-status status-done">COMPLETED</span>
-        </div>
-        <div class="node-step-card">
-            <span class="node-step-title">5. RCA Report & SQLite Storage</span>
-            <span class="node-step-status status-done">COMPLETED</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    if submit_btn:
-        if not raw_log.strip():
-            st.warning("⚠️ Please enter a server log string to analyze.")
-        else:
-            st.info("⚡ Executing LangGraph StateGraph Execution Loop...")
-            progress_bar = st.progress(0)
-            
-            for pct in range(1, 101, 20):
-                time.sleep(0.04)
-                progress_bar.progress(pct)
-                
-            result = triage_pipeline.run(raw_log)
-            progress_bar.progress(100)
-            
-            # Save incident to database
-            incident_id = save_incident(result)
-            
-            st.success(f"✅ Triage Complete! Saved as Incident ID #{incident_id} in SQLite Store.")
-            
-            # Key Incident Metrics Cards
-            col1, col2, col3 = st.columns(3)
-            severity = result.get("severity", "P2")
-            severity_badge = "🔴 P0 (Critical Outage)" if severity == "P0" else ("🟠 P1 (High Severity)" if severity == "P1" else "🔵 P2 (Moderate Exception)")
-            
-            col1.metric("Assigned Severity", severity_badge)
-            col2.metric("Error Category", result["parsed_metadata"].get("error_type", "Unknown"))
-            col3.metric("HTTP Status Code", result["parsed_metadata"].get("status_code", 500))
-            
-            st.markdown("---")
-            
-            # Dynamic Node Routing Outcome Card
-            st.subheader("🔀 Dynamic Graph Node Routing Outcome")
-            if result.get("escalation_status"):
-                st.error(result["escalation_status"])
-            elif result.get("patch_recommendation"):
-                st.success(result["patch_recommendation"])
-                
-            st.info(f"**Diagnostic Conclusion:** {result.get('diagnosis', '')}")
-            
-            # Action Plan
-            st.subheader("🛠️ Recommended SRE Action Items")
-            for item in result.get("action_plan", []):
-                st.checkbox(item, value=False, key=item)
-                
-            st.markdown("---")
-            
-            # RCA Report Preview & Download
-            st.subheader("📄 Generated Root Cause Analysis (RCA) Markdown Report")
-            rca_text = result.get("rca_report", "")
-            st.code(rca_text, language="markdown")
-            
-            st.download_button(
-                label="📥 Download Official RCA Report (.md)",
-                data=rca_text,
-                file_name=f"RCA_Report_ID_{incident_id}_{severity}.md",
-                mime="text/markdown"
-            )
-
-# ==================== TAB 2: SRE KPI ANALYTICS ====================
-with tabs[1]:
-    st.subheader("📊 SRE Performance Analytics & Severity Distribution")
-    metrics = get_sre_metrics()
-    
-    mcol1, mcol2, mcol3, mcol4 = st.columns(4)
-    mcol1.metric("Total Triaged Incidents", metrics["total_incidents"])
-    mcol2.metric("MTTR Reduction %", f"{metrics['mttr_reduction_pct']}%", delta="96.6% Faster Triage")
-    mcol3.metric("Agent Triage Speed", f"{metrics['mttr_agent_minutes']}m", delta="-43.5m Saved per Incident")
-    mcol4.metric("Automation Reliability", metrics["automation_rate"])
-    
-    st.markdown("---")
-    
-    chart_col1, chart_col2 = st.columns(2)
-    
-    with chart_col1:
-        st.subheader("🍩 Severity Distribution Breakdown")
-        labels = ["P0 Critical", "P1 High", "P2 Moderate", "P3 Low"]
-        values = [metrics["p0_critical"], metrics["p1_high"], metrics["p2_moderate"], metrics["p3_low"]]
-        colors = ["#EF4444", "#F59E0B", "#06B6D4", "#10B981"]
-        
-        fig_donut = go.Figure(data=[go.Pie(
-            labels=labels,
-            values=values,
-            hole=.55,
-            marker_colors=colors,
-            textinfo='label+value+percent'
-        )])
-        fig_donut.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#F8FAFC', family='Plus Jakarta Sans'),
-            margin=dict(t=20, b=20, l=20, r=20),
-            showlegend=False
-        )
-        st.plotly_chart(fig_donut, use_container_width=True)
-
-    with chart_col2:
-        st.subheader("⏱️ Triage Speed Comparison (Minutes)")
-        categories = ['Manual Human Triage', 'Agentic Graph Triage']
-        times = [metrics['mttr_manual_minutes'], metrics['mttr_agent_minutes']]
-        
-        fig_bar = go.Figure(data=[go.Bar(
-            x=categories,
-            y=times,
-            marker_color=['#EF4444', '#38BDF8'],
-            text=[f"{t} min" for t in times],
-            textposition='auto'
-        )])
-        fig_bar.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#F8FAFC', family='Plus Jakarta Sans'),
-            yaxis=dict(title='Minutes', gridcolor='rgba(255,255,255,0.1)'),
-            xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
-            margin=dict(t=20, b=20, l=20, r=20)
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-# ==================== TAB 3: HISTORIC AUDIT LOGS ====================
-with tabs[2]:
-    st.subheader("📜 Historical Triaged Incidents Audit Log")
-    
-    col_filter1, col_filter2 = st.columns([1, 2])
-    with col_filter1:
-        severity_filter = st.selectbox("Filter by Severity:", ["All Severities", "P0", "P1", "P2", "P3"])
-    with col_filter2:
-        search_query = st.text_input("Search Incidents:", placeholder="Search by Postgres, Memory, Timeout, NullPointer...")
-        
-    incidents = get_recent_incidents(50)
-    
-    # Apply Filtering
-    if severity_filter != "All Severities":
-        incidents = [inc for inc in incidents if inc["severity"] == severity_filter]
-        
-    if search_query.strip():
-        q = search_query.lower()
-        incidents = [
-            inc for inc in incidents
-            if q in inc["raw_log"].lower() or q in inc["error_type"].lower() or q in inc["diagnosis"].lower()
+    with col_b:
+        st.markdown('<div class="section-title">Agent Execution Pipeline</div>', unsafe_allow_html=True)
+        steps = [
+            "Log Ingestion & Parsing",
+            "Groq LLM Diagnosis",
+            "Severity Routing",
+            "Webhook / PR Dispatch",
+            "RCA Generation & Storage"
         ]
-        
-    st.write(f"Displaying **{len(incidents)}** triaged audit records:")
-    
-    if not incidents:
-        st.info("No matching incidents found in SQLite historical database.")
-    else:
-        for inc in incidents:
-            severity_tag = "🔴 P0" if inc['severity'] == "P0" else ("🟠 P1" if inc['severity'] == "P1" else "🔵 P2")
-            with st.expander(f"Incident #{inc['id']} | {inc['timestamp']} | Severity: {severity_tag} | {inc['error_type']}"):
-                st.write(f"**Raw Crash Log:** `{inc['raw_log']}`")
-                st.write(f"**Diagnostic Conclusion:** {inc['diagnosis']}")
-                st.markdown("---")
-                st.markdown(inc['rca_report'])
+        for i, s in enumerate(steps):
+            st.markdown(f"""
+            <div class="action-item">
+                <span class="action-num">{i+1}</span> {s}
+            </div>""", unsafe_allow_html=True)
 
-# ==================== TAB 4: ARCHITECTURE BLUEPRINT ====================
-with tabs[3]:
-    st.subheader("🏗️ System Architecture & LangGraph Flow Blueprint")
-    st.markdown("""
-    ```mermaid
-    graph TD
-        START((START)) --> A[log_ingestion_node]
-        A --> B[diagnosis_node]
-        B --> C{route_by_severity}
-        C -- Severity P0/P1 --> D[escalation_node]
-        C -- Severity P2/P3 --> E[patch_remediation_node]
-        D --> F[rca_generation_node]
-        E --> F
-        F --> END((END))
-    ```
-    """)
-    st.markdown("""
-    ### 🌟 Core Architectural Highlights:
-    1. **LangGraph State Graph Compilation:** Native graph node execution pipeline managing `IncidentState`.
-    2. **Groq LLM Reasoning & Heuristic AI Engine:** Dual-layer diagnosis parsing unstructured stack traces.
-    3. **Dynamic Graph Node Routing:** Routes critical P0/P1 logs to webhook escalation and P2/P3 logs to auto-hotfix generation.
-    4. **SQLite Persistent Memory:** Audits every incident record for SRE analytics and post-mortem reporting.
-    5. **Slack, PagerDuty & GitHub Integrations:** Dispatches real-time alerts and auto-drafts hotfix GitHub Pull Requests.
-    """)
+    if run:
+        if not log_input.strip():
+            st.warning("Please paste a log first.")
+        else:
+            bar = st.progress(0, text="Running agent graph...")
+            for p in range(0, 101, 20):
+                time.sleep(0.04)
+                bar.progress(p, text=f"Executing node {p//20 + 1}/5...")
+
+            result = triage_pipeline.run(log_input)
+            inc_id = save_incident(result)
+            bar.progress(100, text="✅ Done")
+
+            sev = result.get("severity", "P2")
+            sev_class = {"P0": "sev-p0", "P1": "sev-p1"}.get(sev, "sev-p2")
+            sev_label = {"P0": "P0 — Critical", "P1": "P1 — High", "P2": "P2 — Moderate", "P3": "P3 — Low"}.get(sev, sev)
+            err = result["parsed_metadata"].get("error_type", "Unknown")
+            status_code = result["parsed_metadata"].get("status_code", "—")
+
+            st.markdown(f"""
+            <div class="metric-row">
+                <div class="metric-card"><div class="metric-label">Severity</div><div class="metric-value {sev_class}">{sev_label}</div></div>
+                <div class="metric-card"><div class="metric-label">Error Type</div><div class="metric-value">{err}</div></div>
+                <div class="metric-card"><div class="metric-label">Incident ID</div><div class="metric-value"># {inc_id}</div></div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if result.get("escalation_status"):
+                st.markdown(f'<div class="alert-critical">🚨 {result["escalation_status"]}</div>', unsafe_allow_html=True)
+            elif result.get("patch_recommendation"):
+                st.markdown(f'<div class="alert-ok">🛠️ {result["patch_recommendation"]}</div>', unsafe_allow_html=True)
+
+            st.markdown(f'<div class="alert-info">🔍 {result.get("diagnosis","")}</div>', unsafe_allow_html=True)
+
+            st.markdown('<div class="section-title" style="margin-top:1.5rem">Remediation Actions</div>', unsafe_allow_html=True)
+            for i, item in enumerate(result.get("action_plan", []), 1):
+                st.markdown(f'<div class="action-item"><span class="action-num">{i}</span>{item}</div>', unsafe_allow_html=True)
+
+            rca = result.get("rca_report", "")
+            st.download_button("📥  Download RCA Report", rca, f"RCA_{sev}_#{inc_id}.md", "text/markdown")
+
+# ── TAB 2: ANALYTICS ──────────────────────────────────────────────────────────
+with tabs[1]:
+    m = get_sre_metrics()
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total Incidents", m["total_incidents"])
+    c2.metric("MTTR Reduction", f"{m['mttr_reduction_pct']}%")
+    c3.metric("Agent Speed", f"{m['mttr_agent_minutes']} min")
+    c4.metric("Automation Rate", m["automation_rate"])
+
+    st.markdown("---")
+    g1, g2 = st.columns(2)
+
+    with g1:
+        fig = go.Figure(go.Pie(
+            labels=["P0 Critical", "P1 High", "P2 Moderate", "P3 Low"],
+            values=[m["p0_critical"], m["p1_high"], m["p2_moderate"], m["p3_low"]],
+            hole=0.6,
+            marker_colors=["#F87171", "#FBBF24", "#34D399", "#60A5FA"]
+        ))
+        fig.update_layout(
+            title=dict(text="Severity Distribution", font=dict(color="#CBD5E1", size=14)),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#CBD5E1", family="Inter"),
+            margin=dict(t=40, b=10, l=10, r=10), showlegend=True,
+            legend=dict(font=dict(color="#9CA3AF"))
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with g2:
+        fig2 = go.Figure(go.Bar(
+            x=["Manual SRE", "Autonomous Agent"],
+            y=[m["mttr_manual_minutes"], m["mttr_agent_minutes"]],
+            marker_color=["#F87171", "#7C3AED"],
+            text=[f"{m['mttr_manual_minutes']} min", f"{m['mttr_agent_minutes']} min"],
+            textposition="auto", textfont=dict(color="#fff", family="Inter", size=13)
+        ))
+        fig2.update_layout(
+            title=dict(text="MTTR Comparison", font=dict(color="#CBD5E1", size=14)),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#CBD5E1", family="Inter"),
+            yaxis=dict(title="Minutes", gridcolor="#1F1F2E", color="#6B7280"),
+            xaxis=dict(gridcolor="#1F1F2E", color="#6B7280"),
+            margin=dict(t=40, b=10, l=10, r=10)
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+# ── TAB 3: LOGS ───────────────────────────────────────────────────────────────
+with tabs[2]:
+    f1, f2 = st.columns([1, 2])
+    with f1:
+        sev_f = st.selectbox("Severity", ["All", "P0", "P1", "P2", "P3"])
+    with f2:
+        kw = st.text_input("Search", placeholder="Postgres, OOM, Timeout...")
+
+    data = get_recent_incidents(50)
+    if sev_f != "All":
+        data = [d for d in data if d["severity"] == sev_f]
+    if kw:
+        q = kw.lower()
+        data = [d for d in data if any(q in str(d[k]).lower() for k in ["raw_log","error_type","diagnosis"])]
+
+    st.caption(f"{len(data)} records")
+    icons = {"P0": "🔴", "P1": "🟠", "P2": "🔵", "P3": "🟢"}
+    for inc in data:
+        icon = icons.get(inc["severity"], "⚪")
+        with st.expander(f"{icon}  #{inc['id']} · {inc['error_type']} · {inc['timestamp']}"):
+            st.code(inc["raw_log"], language="text")
+            st.markdown(inc["rca_report"])
